@@ -198,6 +198,17 @@ def main():
                 f.close()
             sys.exit(0)
 
+    # Drop root priviledges
+    try:
+        uid = pwd.pw_name("nobody").pw_uid
+        gid = pwd.pw_name("nobody").pw_gid 
+        os.setgroups([])
+        os.setuid(uid)
+        os.setgid(gid)
+    except OSError, e:
+       log(u"Can't drop root priviledges")
+       log(unicode(e)) 
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:

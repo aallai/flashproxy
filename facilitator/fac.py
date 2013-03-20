@@ -4,12 +4,26 @@ import re
 import socket
 import stat
 import subprocess
+import pwd
 
 # Return true iff the given fd is readable, writable, and executable only by its
 # owner.
 def check_perms(fd):
     mode = os.fstat(fd)[0]
     return (mode & (stat.S_IRWXG | stat.S_IRWXO)) == 0
+
+# Drop root priviledges by switching to user.
+# Underlying os calls can raise KeyError or OSError.
+def drop_privs(user):
+    # Can't switch user if we aren't root.
+    if os.getuid() != 0:
+        raise ValueError("Non-root user tried to drop priviledges.")
+
+    uid = pwd.getpwnam(user).pw_uid
+    gid = pwd.getpwnam(user).pw_gid
+    os.setgroups([])
+    os.setgid(gid)
+    os.setuid(uid)
 
 # A decorator to ignore "broken pipe" errors.
 def catch_epipe(fn):

@@ -27,6 +27,9 @@ POLL_INTERVAL = 60
 
 FACILITATOR_ADDR = ("127.0.0.1", 9002)
 
+# Switch to this user after dropping root priviledges.
+USER = "fac"
+
 # We trust no other CA certificate than this.
 #
 # To find the certificate to copy here,
@@ -184,6 +187,13 @@ if options.daemonize:
             print >> f, pid
             f.close()
         sys.exit(0)
+
+# Drop root priviledges.
+try:
+    fac.drop_privs(USER)
+except (KeyError, OSError), e:
+    log(u"can't drop root priviledges")
+    log(unicode(e))
 
 if options.imaplib_debug:
     imaplib.Debug = 4

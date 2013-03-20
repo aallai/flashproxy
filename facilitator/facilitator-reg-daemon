@@ -27,6 +27,8 @@ CLIENT_TIMEOUT = 1.0
 MAX_LENGTH = 40 * 1024
 
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+# Switch to this user when dropping priviledges.
+USER = "fac"
 
 class options(object):
     key_filename = None
@@ -197,6 +199,13 @@ def main():
                 print >> f, pid
                 f.close()
             sys.exit(0)
+
+    # Drop root priviledges.
+    try:
+        fac.drop_privs(USER)
+    except (KeyError, OSError), e:
+        log(u"can't drop root priviledges")
+        log(unicode(e))
 
     try:
         server.serve_forever()

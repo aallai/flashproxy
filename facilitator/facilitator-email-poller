@@ -12,6 +12,7 @@ import stat
 import sys
 import tempfile
 import time
+import ssl
 
 import fac
 
@@ -232,6 +233,17 @@ def imap_get_uid(imap, index):
         raise imaplib.IMAP4.abort("Can't find UID in %s" % repr(data[0]))
     return m.group(1)
 
+def imap_loop(imap):
+    while True:
+        try:
+            imap_loop_sub(imap)
+        except (ssl.SSLError, socket.error), e:
+            log(u"Exception caught in imap_loop:")
+            log(unicode(e))
+            continue
+
+        time.sleep(POLL_INTERVAL)
+
 # Gmail's IMAP folders are funny: they are not real folders, but actually views
 # of messages having a particular label. INBOX consists of messages having the
 # INBOX label, for example. Deleting a message from a folder just removes its
@@ -241,41 +253,39 @@ def imap_get_uid(imap, index):
 # To really delete a message, you must copy it to "[Gmail]/Trash" and then
 # delete it from there. Messages in Trash are deleted automatically after 30
 # days, but we do it immediately.
-def imap_loop(imap):
-    while True:
-        # Copy all messages to Trash, and work on them from there. This is a
-        # failsafe so that messages will eventually be deleted if we are not
-        # able to retrieve them. This act of copying also deletes from All Mail.
-        typ, data = imap.select("[Gmail]/All Mail")
-        check_imap_return(typ, data)
-        imap.copy("1:*", "[Gmail]/Trash")
+def imap_loop_sub(imap):
+    # Copy all messages to Trash, and work on them from there. This is a
+    # failsafe so that messages will eventually be deleted if we are not
+    # able to retrieve them. This act of copying also deletes from All Mail.
+    typ, data = imap.select("[Gmail]/All Mail")
+    check_imap_return(typ, data)
+    imap.copy("1:*", "[Gmail]/Trash")
 
-        typ, data = imap.select("[Gmail]/Trash")
-        check_imap_return(typ, data)
-        exists = int(data[0])
-        if exists > 0:
-            while True:
-                # Grab message 1 on each iteration; remaining messages shift down so
-                # the next message we process is also message 1.
-                uid = imap_get_uid(imap, "1")
-                if uid is None:
-                    break
+    typ, data = imap.select("[Gmail]/Trash")
+    check_imap_return(typ, data)
+    exists = int(data[0])
+    if exists > 0:
+        while True:
+            # Grab message 1 on each iteration; remaining messages shift
+            # down so
+            # the next message we process is also message 1.
+            uid = imap_get_uid(imap, "1")
+            if uid is None:
+                break
 
-                typ, data = imap.uid("FETCH", uid, "(BODY[])")
-                check_imap_return(typ, data)
-                msg_text = data[0][1]
-                typ, data = imap.uid("STORE", uid, "+FLAGS", "\\Deleted")
-                check_imap_return(typ, data)
-                typ, data = imap.expunge()
-                check_imap_return(typ, data)
+            typ, data = imap.uid("FETCH", uid, "(BODY[])")
+            check_imap_return(typ, data)
+            msg_text = data[0][1]
+            typ, data = imap.uid("STORE", uid, "+FLAGS", "\\Deleted")
+            check_imap_return(typ, data)
+            typ, data = imap.expunge()
+            check_imap_return(typ, data)
 
-                try:
-                    msg = email.message_from_string(msg_text)
-                    handle_message(msg)
-                except Exception, e:
-                    log("Error processing message, deleting anyway: %s" % str(e))
-
-        time.sleep(POLL_INTERVAL)
+            try:
+                msg = email.message_from_string(msg_text)
+                handle_message(msg)
+            except Exception, e:
+                log("Error processing message, deleting anyway: %s" % str(e))
 
 def imap_login():
     """Make an IMAP connection, check the certificate and public key, and log in."""

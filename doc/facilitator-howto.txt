@@ -110,6 +110,10 @@ Restart servers.
 	# cd flashproxy/facilitator
 	# make install
 
+Create the user the daemons will run as.
+
+	# useradd -s /usr/sbin/nologin -r -M -d /nonexistent fac
+
 This installs facilitator.cgi, facilitator, facilitator-email-poller,
 facilitator-reg-daemon, facilitator-reg, and fac.py to /usr/local/bin.
 It also installs System V init files to /etc/init.d/.

@@ -7,9 +7,9 @@ MANDIR = $(PREFIX)/share/man
 PYTHON = python
 export PY2EXE_TMPDIR = py2exe-tmp
 
-CLIENT_BIN = flashproxy-client flashproxy-reg-email flashproxy-reg-http flashproxy-reg-url
+CLIENT_BIN = flashproxy-client flashproxy-reg-email flashproxy-reg-http flashproxy-reg-url flashproxy.py
 CLIENT_MAN = doc/flashproxy-client.1 doc/flashproxy-reg-email.1 doc/flashproxy-reg-http.1 doc/flashproxy-reg-url.1
-CLIENT_DIST_FILES = $(CLIENT_BIN) README LICENSE ChangeLog torrc
+CLIENT_DIST_FILES = $(CLIENT_BIN) README LICENSE ChangeLog torrc setup.py
 CLIENT_DIST_DOC_FILES = $(CLIENT_MAN) doc/LICENSE.PYTHON
 
 all: $(CLIENT_DIST_FILES) $(CLIENT_MAN)
@@ -45,14 +45,14 @@ sign: dist/$(DISTNAME).zip
 
 $(PY2EXE_TMPDIR)/dist: $(CLIENT_BIN)
 	rm -rf $(PY2EXE_TMPDIR)
-	$(PYTHON) setup.py py2exe -q
+	$(PYTHON) setup_py2exe.py py2exe -q
 
 # See doc/windows-deployment-howto.txt.
 dist-exe: DISTNAME := $(DISTNAME)-win32
 dist-exe: CLIENT_BIN := $(PY2EXE_TMPDIR)/dist/*
 dist-exe: CLIENT_MAN := $(addsuffix .txt,$(CLIENT_MAN))
 # Delegate to the "dist" target using the substitutions above.
-dist-exe: $(PY2EXE_TMPDIR)/dist setup.py dist
+dist-exe: $(PY2EXE_TMPDIR)/dist setup_py2exe.py dist
 
 clean:
 	rm -f *.pyc
